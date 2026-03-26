@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v1.6</title>
+    <title>數學遊戲：森林裡的奇妙小屋 v1.7</title>
     <style>
-        /* CSS 與 v1.4/v1.5 完全相同，此處省略以保持簡潔 */
+        /* CSS 與 v1.6 完全相同，此處省略以保持簡潔 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
         :root { --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3; --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F; --font-family: 'Noto Sans TC', sans-serif; }
         body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--cabin-frame-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; touch-action: none; }
@@ -42,7 +42,7 @@
     </style>
 </head>
 <body>
-    <!-- HTML 結構與 v1.5 完全相同 -->
+    <!-- HTML 結構與 v1.6 完全相同 -->
     <div class="game-container" id="game-main-interface" style="display:none;">
         <header><h1>森林裡的奇妙小屋</h1></header>
         <div class="status-bar"><div id="timer">遊戲時間: 60</div><div id="score">分數: 0</div></div>
@@ -66,9 +66,9 @@
     </div>
 
     <script>
-    // --- 版本 1.6 ---
+    // --- 版本 1.7 ---
     
-    // 1-6. DOM 元素, 設定, 資源, 音效, 流程, 排行榜 (與 v1.5 相同)
+    // 1-6. DOM 元素, 設定, 資源, 音效, 流程, 排行榜 (與 v1.6 相同)
     const gameMainInterface = document.getElementById('game-main-interface'), loginScreen = document.getElementById('login-screen'), instructionScreen = document.getElementById('instruction-screen'), endScreen = document.getElementById('end-screen'), classSelect = document.getElementById('class-select'), studentIdInput = document.getElementById('student-id-input'), loginButton = document.getElementById('login-button'), loginError = document.getElementById('login-error'), readyButton = document.getElementById('ready-button'), replayButton = document.getElementById('replay-button'), timerDisplay = document.getElementById('timer'), scoreDisplay = document.getElementById('score'), instructionText = document.getElementById('instruction-text'), gameGrid = document.getElementById('game-grid'), draggableContainer = document.getElementById('draggable-emoji-container'), endMessage = document.getElementById('end-message'), leaderboardContainer = document.getElementById('leaderboard-container');
     const GRID_ROWS = 3, GRID_COLS = 4, TOTAL_TIME = 60;
     let score = 0, timer = TOTAL_TIME, timerInterval, currentUser = null;
@@ -84,72 +84,105 @@
     function getLeaderboard() { const data = localStorage.getItem('mathGameLeaderboard'); return (data ? JSON.parse(data) : []).sort((a, b) => b.score - a.score); }
     function displayLeaderboard() { const leaderboard = getLeaderboard(); let html = '<table class="leaderboard"><thead><tr><th>排名</th><th>班別</th><th>學號</th><th>分數</th></tr></thead><tbody>'; if (leaderboard.length === 0) { html += '<tr><td colspan="4">暫無記錄</td></tr>'; } else { leaderboard.forEach((player, index) => { const isCurrentUser = player.class === currentUser.class && player.id === currentUser.id; html += `<tr class="${isCurrentUser ? 'current-player' : ''}"><td>${index + 1}</td><td>${player.class}</td><td>${player.id}</td><td>${player.score}</td></tr>`; }); } html += '</tbody></table>'; leaderboardContainer.innerHTML = html; }
 
-    // --- 7. 題目與拖放邏輯 (*** 版本 1.6 改良 ***) ---
+    // --- 7. 題目與拖放邏輯 (*** 版本 1.7 改良 ***) ---
     
     let draggedElement = null;
 
-    // 放置和答案檢查
+    // *** 關鍵修正：在 handleDragEnd 中加入恢復邏輯，作為最終防線 ***
+    function handleDragEnd() {
+        if (draggedElement) {
+            // 確保無論發生什麼，拖動結束後元素都可見
+            draggedElement.style.visibility = 'visible';
+            
+            // 如果元素不在其原始容器中 (意味著它沒有被成功放置)
+            // 則將其強制送回
+            if (draggedElement.parentElement !== draggableContainer) {
+                 // 清空容器以防萬一有重複的元素
+                 draggableContainer.innerHTML = ''; 
+                 draggableContainer.appendChild(draggedElement);
+            }
+        }
+        draggedElement = null;
+    }
+
+    // *** 關鍵修正：在 handleTouchEnd 中加入恢復邏輯 ***
+    function handleTouchEnd(e) {
+        if (!draggedElement) return;
+
+        draggedElement.style.visibility = 'hidden'; // 暫時隱藏以正確檢測下方的元素
+        const touch = e.changedTouches[0];
+        const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        handleDrop(dropTarget);
+
+        // 恢復拖動元素的樣式
+        draggedElement.style.position = '';
+        draggedElement.style.left = '';
+        draggedElement.style.top = '';
+        draggedElement.style.pointerEvents = 'auto';
+        draggedElement.style.visibility = 'visible';
+        draggedElement.classList.remove('dragging');
+
+        // *** 最終防線 ***
+        // 檢查拖動結束後，可拖動區是否為空。如果是，則把元素放回去。
+        if (draggableContainer.innerHTML === '') {
+            draggableContainer.appendChild(draggedElement);
+            playSound('wrong');
+        }
+        
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+        draggedElement = null;
+    }
+
     function handleDrop(target) {
         const cell = target ? target.closest('.grid-cell') : null;
+
+        // 情況 1: 成功放置在空的格子裡
         if (cell && !cell.hasChildNodes()) {
             if (checkAnswer(cell)) {
+                // 答對
                 playSound('correct');
                 score += 10;
                 updateStatus();
+                // 複製一個 emoji 放在格子上
                 const tempEmoji = draggedElement.cloneNode(true);
                 tempEmoji.classList.remove('dragging');
                 cell.appendChild(tempEmoji);
+                // 移除原始的可拖動 emoji
                 if (draggedElement.parentElement) {
                     draggedElement.parentElement.removeChild(draggedElement);
                 }
                 setTimeout(generateQuestion, 400);
             } else {
+                // 答錯，但放在合格的空格子
                 playSound('wrong');
+                // 恢復 emoji 的可見性，它會在 DragEnd/TouchEnd 中被處理
+                if (draggedElement) draggedElement.style.visibility = 'visible';
             }
-        } else {
-            // 如果不是合格的空格子，也觸發錯誤音效
-            // 這是為了防止拖到有 emoji 的格子上時靜默無反應
-            if (draggedElement) playSound('wrong');
+        } 
+        // 情況 2: 放置在無效區域 (不是空格子)
+        else {
+            if (draggedElement) {
+                playSound('wrong');
+                // 恢復 emoji 的可見性
+                draggedElement.style.visibility = 'visible';
+            }
         }
     }
 
-    // *** 關鍵修正：修正 anchorCell 的選擇器 ***
-    function checkAnswer(droppedCell) {
-        if (!draggedElement) return false;
-        
-        const droppedRow = parseInt(droppedCell.dataset.row);
-        const droppedCol = parseInt(droppedCell.dataset.col);
-        
-        // **修正前**: const anchorCell = gameGrid.querySelector('.emoji[data-anchor="true"]');
-        // **修正後**:
-        const anchorCell = gameGrid.querySelector('.grid-cell[data-anchor="true"]');
-
-        if (!anchorCell) {
-            console.error("在 grid 中找不到 anchorCell！"); // 調試信息
-            return false;
-        }
-
-        const anchorRow = parseInt(anchorCell.dataset.row);
-        const anchorCol = parseInt(anchorCell.dataset.col);
-        const questionType = draggedElement.dataset.questionType;
-        
-        return checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType);
-    }
-
-    // 拖放、題目生成等其他函數 (與 v1.5 相同)
+    // 其他函數 (與 v1.6 相同，未作修改)
+    function checkAnswer(droppedCell) { if (!draggedElement) return false; const droppedRow = parseInt(droppedCell.dataset.row); const droppedCol = parseInt(droppedCell.dataset.col); const anchorCell = gameGrid.querySelector('.grid-cell[data-anchor="true"]'); if (!anchorCell) { console.error("在 grid 中找不到 anchorCell！"); return false; } const anchorRow = parseInt(anchorCell.dataset.row); const anchorCol = parseInt(anchorCell.dataset.col); const questionType = draggedElement.dataset.questionType; return checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType); }
     function generateQuestion() { gameGrid.innerHTML = ''; draggableContainer.innerHTML = ''; const currentQuestion = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)]; let [subjectEmoji, anchorEmoji] = getRandomItems(TARGET_EMOJIS, 2); let anchorRow, anchorCol, anchorIndex; let possibleSolutionCells = []; while (possibleSolutionCells.length === 0) { do { anchorRow = Math.floor(Math.random() * GRID_ROWS); anchorCol = Math.floor(Math.random() * GRID_COLS); } while (!isValidAnchorPosition(anchorRow, anchorCol, currentQuestion.type)); anchorIndex = anchorRow * GRID_COLS + anchorCol; for (let r = 0; r < GRID_ROWS; r++) { for (let c = 0; c < GRID_COLS; c++) { if (checkAnswerLogic(r, c, anchorRow, anchorCol, currentQuestion.type)) { possibleSolutionCells.push(r * GRID_COLS + c); } } } } const solutionIndex = possibleSolutionCells[Math.floor(Math.random() * possibleSolutionCells.length)]; let availableSpots = []; for (let i = 0; i < GRID_ROWS * GRID_COLS; i++) { if (i !== anchorIndex && i !== solutionIndex) availableSpots.push(i); } shuffleArray(availableSpots); const gridState = Array(GRID_ROWS * GRID_COLS).fill(null); gridState[anchorIndex] = anchorEmoji; let distractorCount = Math.floor(Math.random() * 3) + 3; const availableDistractors = getRandomItems(DISTRACTOR_EMOJIS, distractorCount); for (let i = 0; i < distractorCount; i++) { const spot = availableSpots.pop(); if (spot !== undefined) gridState[spot] = availableDistractors[i]; } for (let i = 0; i < gridState.length; i++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.row = Math.floor(i / GRID_COLS); cell.dataset.col = i % GRID_COLS; if (gridState[i]) { const emojiSpan = document.createElement('span'); emojiSpan.classList.add('emoji', 'immobile'); emojiSpan.textContent = gridState[i]; if (i === anchorIndex) cell.dataset.anchor = 'true'; cell.appendChild(emojiSpan); } gameGrid.appendChild(cell); } instructionText.innerHTML = `<span class="emoji">${subjectEmoji}</span> ${currentQuestion.text.replace('...', `<span class="emoji">${anchorEmoji}</span>`)}`; const draggableEmoji = createDraggableEmoji(subjectEmoji, currentQuestion); draggableContainer.appendChild(draggableEmoji); }
     function createDraggableEmoji(emoji, question) { const element = document.createElement('span'); element.textContent = emoji; element.classList.add('emoji'); element.draggable = true; element.dataset.questionType = question.type; element.addEventListener('dragstart', handleDragStart); element.addEventListener('touchstart', handleTouchStart, { passive: false }); return element; }
     function handleDragStart(e) { draggedElement = e.target; setTimeout(() => { if (draggedElement) draggedElement.style.visibility = 'hidden'; }, 0); }
-    function handleDragEnd() { if (draggedElement) draggedElement.style.visibility = 'visible'; draggedElement = null; }
-    function handleTouchStart(e) { e.preventDefault(); draggedElement = e.target; draggedElement.classList.add('dragging'); draggedElement.style.position = 'absolute'; draggedElement.style.pointerEvents = 'none'; document.addEventListener('touchmove', handleTouchMove, { passive: false }); document.addEventListener('touchend', handleTouchEnd); handleTouchMove(e); }
     function handleTouchMove(e) { e.preventDefault(); if (!draggedElement) return; const touch = e.touches[0]; draggedElement.style.left = (touch.pageX - draggedElement.offsetWidth / 2) + 'px'; draggedElement.style.top = (touch.pageY - draggedElement.offsetHeight / 2) + 'px'; }
-    function handleTouchEnd(e) { if (!draggedElement) return; draggedElement.style.visibility = 'hidden'; const touch = e.changedTouches[0]; const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY); handleDrop(dropTarget); draggedElement.style.position = ''; draggedElement.style.left = ''; draggedElement.style.top = ''; draggedElement.style.pointerEvents = 'auto'; draggedElement.style.visibility = 'visible'; draggedElement.classList.remove('dragging'); document.removeEventListener('touchmove', handleTouchMove); document.removeEventListener('touchend', handleTouchEnd); draggedElement = null; }
     function checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType) { switch (questionType) { case 'above': return droppedCol === anchorCol && droppedRow < anchorRow; case 'below': return droppedCol === anchorCol && droppedRow > anchorRow; case 'left': return droppedRow === anchorRow && droppedCol < anchorCol; case 'right': return droppedRow === anchorRow && droppedCol > anchorCol; default: return false; } }
     function getRandomItems(arr, n) { const shuffled = [...arr].sort(() => 0.5 - Math.random()); return shuffled.slice(0, n); }
     function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; } }
     function isValidAnchorPosition(row, col, type) { switch (type) { case 'above': return row > 0; case 'below': return row < GRID_ROWS - 1; case 'left': return col > 0; case 'right': return col < GRID_COLS - 1; default: return true; } }
     
-    // 8. 事件綁定 (與 v1.5 相同)
+    // 8. 事件綁定 (與 v1.6 相同)
     gameGrid.addEventListener('dragover', e => e.preventDefault());
     gameGrid.addEventListener('drop', e => { e.preventDefault(); handleDrop(e.target); handleDragEnd(); });
     loginButton.addEventListener('click', handleLogin);
