@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v6.0</title>
+    <title>數學遊戲：森林裡的奇妙小屋 v6.1</title>
     <style>
-        /* CSS 與 v4.5/5.0 完全相同，已確認其穩定性 */
+        /* CSS 與 v6.0 完全相同 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
         :root { font-size: 2.0vmin; --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3; --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F; --font-family: 'Noto Sans TC', sans-serif; --container-bg: rgba(232, 221, 203, 0.85); }
         body { font-family: var(--font-family); background-image: url('my_background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; color: var(--cabin-frame-color); display: flex; justify-content: center; align-items: flex-start; padding: 5vh 5vw; min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box; }
@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-    <!-- HTML 結構與 v4.5/5.0 完全相同 -->
+    <!-- HTML 結構與 v6.0 完全相同 -->
     <div class="game-container hidden" id="game-main-interface"> <div class="info-panel"> <header><h1>森林裡的奇妙小屋</h1></header> <div class="status-bar"><div id="timer">遊戲時間: 60</div><div id="score">分數: 0</div></div> <div class="instruction-area" id="instruction-text"></div> </div> <div class="content-area"> <div class="game-grid" id="game-grid"></div> <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div> </div> </div>
     <div class="game-overlay" id="login-screen"><h2>歡迎來到奇妙小屋</h2><div class="login-form"><div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div><div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div></div><div id="login-error"></div><button class="game-button" id="login-button">確定</button></div>
     <div class="game-overlay hidden" id="instruction-screen"><h2>遊戲規則</h2><p>在 60 秒內，根據上方的指令，將下方的水果拖到小屋中正確的位置。答對加 10 分並進入下一題，答錯會彈回原位，直到答對為止。看看你有多快！</p><button class="game-button" id="ready-button">準備好了！</button></div>
@@ -27,84 +27,33 @@
     <div class="feedback-overlay hidden" id="feedback-overlay"><div class="feedback-icon" id="feedback-icon"></div></div>
 
     <script>
-    // --- 版本 6.0 ---
+    // --- 版本 6.1 ---
     
     const IS_DEBUG_MODE = true; 
     const playerRank = document.getElementById('player-rank'), feedbackOverlay = document.getElementById('feedback-overlay'), feedbackIcon = document.getElementById('feedback-icon'), gameMainInterface = document.getElementById('game-main-interface'), loginScreen = document.getElementById('login-screen'), instructionScreen = document.getElementById('instruction-screen'), endScreen = document.getElementById('end-screen'), classSelect = document.getElementById('class-select'), studentIdSelect = document.getElementById('student-id-select'), loginButton = document.getElementById('login-button'), loginError = document.getElementById('login-error'), readyButton = document.getElementById('ready-button'), replayButton = document.getElementById('replay-button'), timerDisplay = document.getElementById('timer'), scoreDisplay = document.getElementById('score'), instructionText = document.getElementById('instruction-text'), gameGrid = document.getElementById('game-grid'), draggableContainer = document.getElementById('draggable-emoji-container'), endMessage = document.getElementById('end-message'), leaderboardContainer = document.getElementById('leaderboard-container');
     const GRID_ROWS = 3, GRID_COLS = 4, TOTAL_TIME = 60; let score = 0, timer = TOTAL_TIME, timerInterval, currentUser = null; const TARGET_EMOJIS = ['🍎', '🍊', '🍋', '🍐', '🍏', '🥭', '🥥', '🍅', '🥝', '🍑']; const DISTRACTOR_EMOJIS = ['🍌', '🍓', '🍇', '🍍', '🍉', '🍒', '🍆', '🥕', '🌽', '🥦']; 
     const QUESTION_TYPES = [ { type: 'above', format: 'S_V_O' }, { type: 'below', format: 'S_V_O' }, { type: 'left',  format: 'S_V_O' }, { type: 'right', format: 'S_V_O' }, { type: 'above', format: 'O_V_S' }, { type: 'below', format: 'O_V_S' }, { type: 'left',  format: 'O_V_S' }, { type: 'right', format: 'O_V_S' }, { type: 'between', format: 'S_V_O' }, { type: 'between', format: 'S_V_O' }, { type: 'between', format: 'S_V_O' }]; const TEXT_MAP = { above: '上面', below: '下面', left: '左面', right: '右面', between: '之間' };
     
-    // --- 7. 題目與拖放邏輯 (*** 版本 6.0 徹底重寫 ***) ---
+    // --- 核心邏輯區 (與 v6.0 相同，已確認其穩定性) ---
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) { if (!audioContext) return; if (audioContext.state === 'suspended') { audioContext.resume(); } const o = audioContext.createOscillator(), g = audioContext.createGain(); o.connect(g); g.connect(audioContext.destination); switch (type) { case 'click': o.type = 'sine'; o.frequency.setValueAtTime(440, audioContext.currentTime); g.gain.setValueAtTime(0.5, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); break; case 'correct': o.type = 'triangle'; o.frequency.setValueAtTime(523.25, audioContext.currentTime); o.frequency.linearRampToValueAtTime(1046.50, audioContext.currentTime + 0.15); g.gain.setValueAtTime(0.3, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); break; case 'wrong': o.type = 'square'; o.frequency.setValueAtTime(220, audioContext.currentTime); g.gain.setValueAtTime(0.3, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3); break; case 'tick': o.type = 'sine'; o.frequency.setValueAtTime(880, audioContext.currentTime); g.gain.setValueAtTime(0.2, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1); break; case 'gameOver': o.type = 'sawtooth'; o.frequency.setValueAtTime(440, audioContext.currentTime); o.frequency.linearRampToValueAtTime(220, audioContext.currentTime + 0.5); g.gain.setValueAtTime(0.4, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); break; } o.start(); o.stop(audioContext.currentTime + 0.5); }
+    function populateStudentIds() { for (let i = 1; i <= 25; i++) { const option = document.createElement('option'); option.value = i; option.textContent = i; studentIdSelect.appendChild(option); } }
+    function handleLogin() { const className = classSelect.value; const studentId = studentIdSelect.value; if (!className || !studentId) { loginError.textContent = '請選擇班別和學號！'; return; } currentUser = { class: className, id: studentId }; loginError.textContent = ''; playSound('click'); loginScreen.classList.add('hidden'); instructionScreen.classList.remove('hidden'); }
+    function startGame() { playSound('click'); instructionScreen.classList.add('hidden'); endScreen.classList.add('hidden'); gameMainInterface.classList.remove('hidden'); score = 0; timer = TOTAL_TIME; updateStatus(); generateQuestion(); clearInterval(timerInterval); timerInterval = setInterval(() => { timer--; updateStatus(); if (timer <= 5 && timer > 0) playSound('tick'); if (timer <= 0) endGame(); }, 1000); }
+    function endGame() { clearInterval(timerInterval); playSound('gameOver'); gameMainInterface.classList.add('hidden'); const correctAnswers = score / 10; endMessage.innerHTML = `你在 ${TOTAL_TIME} 秒內答對了 ${correctAnswers} 題，<br>總分是 ${score}！`; saveScore(currentUser.class, currentUser.id, score); displayLeaderboard(); endScreen.classList.remove('hidden'); }
+    function displayLeaderboard() { const leaderboard = getLeaderboard(); let html = '<table class="leaderboard"><thead><tr><th>排名</th><th>班別</th><th>學號</th><th>分數</th></tr></thead><tbody>'; let currentPlayerRank = -1; if (leaderboard.length === 0) { html += '<tr><td colspan="4">暫無記錄</td></tr>'; } else { leaderboard.forEach((player, index) => { const rank = index + 1; const isCurrentUser = player.class === currentUser.class && player.id === currentUser.id; if (isCurrentUser) { currentPlayerRank = rank; } html += `<tr class="${isCurrentUser ? 'current-player' : ''}"><td>${rank}</td><td>${player.class}</td><td>${player.id}</td><td>${player.score}</td></tr>`; }); } html += '</tbody></table>'; leaderboardContainer.innerHTML = html; if (currentPlayerRank > 0) { playerRank.textContent = `你現時排行第 ${currentPlayerRank} 位`; } else { playerRank.textContent = ''; } }
+    function replayGame() { playSound('click'); endScreen.classList.add('hidden'); instructionScreen.classList.remove('hidden'); }
+    function updateStatus() { timerDisplay.textContent = `遊戲時間: ${timer}`; scoreDisplay.textContent = `分數: ${score}`; }
+    function saveScore(className, studentId, score) { const leaderboard = getLeaderboard(), playerIndex = leaderboard.findIndex(p => p.class === className && p.id === studentId); if (playerIndex > -1) { if (score > leaderboard[playerIndex].score) { leaderboard[playerIndex].score = score; } } else { leaderboard.push({ class: className, id: studentId, score: score }); } localStorage.setItem('mathGameLeaderboard', JSON.stringify(leaderboard)); }
+    function getLeaderboard() { const data = localStorage.getItem('mathGameLeaderboard'); return (data ? JSON.parse(data) : []).sort((a, b) => b.score - a.score); }
     let draggedElement = null; let isChecking = false; let initialX = 0, initialY = 0;
-
-    // *** 關鍵修正：generateQuestion 只負責調度和清空 ***
-    function generateQuestion() {
-        gameGrid.innerHTML = '';
-        draggableContainer.innerHTML = '';
-        
-        const currentQuestion = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)];
-        
-        if (IS_DEBUG_MODE) { console.log('生成題目:', currentQuestion.type); }
-
-        try {
-            if (currentQuestion.type === 'between') {
-                generateBetweenQuestion(currentQuestion);
-            } else {
-                generateSimpleQuestion(currentQuestion);
-            }
-        } catch (error) {
-            console.error("生成題目時發生不可預見的錯誤:", error, "將安全地生成一個簡單題目作為備用。");
-            generateSimpleQuestion(QUESTION_TYPES[0]);
-        }
-    }
-    
-    // *** 關鍵修正：renderGrid 只負責繪製，絕不刪除 ***
-    function renderGrid(gridState, anchorIndices) {
-        // 這裡絕不能有 innerHTML = ''
-        for (let i = 0; i < gridState.length; i++) {
-            const cell = document.createElement('div'); cell.classList.add('grid-cell');
-            cell.dataset.row = Math.floor(i / GRID_COLS); cell.dataset.col = i % GRID_COLS;
-            if (gridState[i]) {
-                const emojiSpan = document.createElement('span'); emojiSpan.classList.add('emoji', 'immobile'); emojiSpan.textContent = gridState[i];
-                if (anchorIndices.includes(i)) cell.dataset.anchor = "true";
-                cell.appendChild(emojiSpan);
-            }
-            gameGrid.appendChild(cell);
-        }
-    }
-
-    // *** 關鍵修正：checkAnswer ***
-    function checkAnswer(droppedCell) {
-        if (!draggedElement) return false;
-        const questionType = draggedElement.dataset.questionType;
-        const droppedRow = parseInt(droppedCell.dataset.row); const droppedCol = parseInt(droppedCell.dataset.col);
-        const anchorCells = gameGrid.querySelectorAll('.grid-cell[data-anchor="true"]');
-        if (anchorCells.length === 0) return false;
-        
-        if (questionType === 'between') {
-            if (anchorCells.length < 2) return false;
-            const r1 = parseInt(anchorCells[0].dataset.row), c1 = parseInt(anchorCells[0].dataset.col);
-            const r2 = parseInt(anchorCells[1].dataset.row), c2 = parseInt(anchorCells[1].dataset.col);
-            
-            if (c1 === c2) { // 垂直
-                return droppedCol === c1 && droppedRow > Math.min(r1, r2) && droppedRow < Math.max(r1, r2);
-            } 
-            if (r1 === r2) { // 水平
-                return droppedRow === r1 && droppedCol > Math.min(c1, c2) && droppedCol < Math.max(c1, c2);
-            }
-        } else {
-            const anchorRow = parseInt(anchorCells[0].dataset.row);
-            const anchorCol = parseInt(anchorCells[0].dataset.col);
-            return checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType);
-        }
-        return false;
-    }
-    
-    // 其他所有函數與 v4.5/5.0 保持一致，已確認其穩定性。
-    function generateSimpleQuestion(question) { let [subjectEmoji, anchorEmoji] = getRandomItems(TARGET_EMOJIS, 2); let anchorRow, anchorCol, anchorIndex, possibleSolutionCells = []; while (possibleSolutionCells.length === 0) { do { anchorRow = Math.floor(Math.random() * GRID_ROWS); anchorCol = Math.floor(Math.random() * GRID_COLS); } while (!isValidAnchorPosition(anchorRow, anchorCol, question.type)); anchorIndex = anchorRow * GRID_COLS + anchorCol; for (let r = 0; r < GRID_ROWS; r++) for (let c = 0; c < GRID_COLS; c++) if (checkAnswerLogic(r, c, anchorRow, anchorCol, question.type)) possibleSolutionCells.push(r * GRID_COLS + c); } const solutionIndex = possibleSolutionCells[Math.floor(Math.random() * possibleSolutionCells.length)]; let availableSpots = []; for (let i = 0; i < GRID_ROWS * GRID_COLS; i++) if (i !== anchorIndex && i !== solutionIndex) availableSpots.push(i); shuffleArray(availableSpots); const gridState = Array(GRID_ROWS * GRID_COLS).fill(null); gridState[anchorIndex] = anchorEmoji; let distractorCount = Math.floor(Math.random() * 3) + 3; const availableDistractors = getRandomItems(DISTRACTOR_EMOJIS, distractorCount); for (let i = 0; i < distractorCount; i++) { const spot = availableSpots.pop(); if (spot !== undefined) gridState[spot] = availableDistractors[i]; } renderGrid(gridState, [anchorIndex]); if (question.format === 'S_V_O') { instructionText.innerHTML = `<span class="emoji">${subjectEmoji}</span> 在 <span class="emoji">${anchorEmoji}</span> 的${TEXT_MAP[question.type]}`; } else { instructionText.innerHTML = `<span class="emoji">${anchorEmoji}</span> 的${TEXT_MAP[question.type]}是 <span class="emoji">${subjectEmoji}</span>`; } const draggableEmoji = createDraggableEmoji(subjectEmoji, question); draggableContainer.appendChild(draggableEmoji); }
-    function generateBetweenQuestion(question) { let [subjectEmoji, anchorEmoji1, anchorEmoji2] = getRandomItems(TARGET_EMOJIS, 3); const possibleTriplets = []; for (let r = 0; r < GRID_ROWS; r++) { for (let c = 0; c <= GRID_COLS - 3; c++) { possibleTriplets.push([{r,c}, {r,c:c+1}, {r,c:c+2}]); } } for (let c = 0; c < GRID_COLS; c++) { for (let r = 0; r <= GRID_ROWS - 3; r++) { possibleTriplets.push([{r,c}, {r:r+1,c}, {r:r+2,c}]); } } const triplet = possibleTriplets[Math.floor(Math.random() * possibleTriplets.length)]; const [pos1, solutionPos, pos2] = triplet; const [anchor1Pos, anchor2Pos] = Math.random() < 0.5 ? [pos1, pos2] : [pos2, pos1]; const anchor1Index = anchor1Pos.r * GRID_COLS + anchor1Pos.c; const anchor2Index = anchor2Pos.r * GRID_COLS + anchor2Pos.c; const solutionIndex = solutionPos.r * GRID_COLS + solutionPos.c; let availableSpots = []; for (let i = 0; i < GRID_ROWS * GRID_COLS; i++) if (i !== anchorIndex && i !== anchor2Index && i !== solutionIndex) availableSpots.push(i); shuffleArray(availableSpots); const gridState = Array(GRID_ROWS * GRID_COLS).fill(null); gridState[anchor1Index] = anchorEmoji1; gridState[anchor2Index] = anchorEmoji2; let distractorCount = Math.floor(Math.random() * 2) + 2; const availableDistractors = getRandomItems(DISTRACTOR_EMOJIS, distractorCount); for (let i = 0; i < distractorCount; i++) { const spot = availableSpots.pop(); if (spot !== undefined) gridState[spot] = availableDistractors[i]; } renderGrid(gridState, [anchor1Index, anchor2Index]); instructionText.innerHTML = `<span class="emoji">${subjectEmoji}</span> 在 <span class="emoji">${anchorEmoji1}</span> 和 <span class="emoji">${anchorEmoji2}</span> 之間`; const draggableEmoji = createDraggableEmoji(subjectEmoji, question); draggableContainer.appendChild(draggableEmoji); }
+    function generateQuestion() { gameGrid.innerHTML = ''; draggableContainer.innerHTML = ''; const currentQuestion = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)]; if (IS_DEBUG_MODE) { console.log('生成題目:', currentQuestion.type); } try { if (currentQuestion.type === 'between') { generateBetweenQuestion(currentQuestion); } else { generateSimpleQuestion(currentQuestion); } } catch (error) { console.error("生成題目時發生不可預見的錯誤:", error, "將安全地生成一個簡單題目作為備用。"); generateSimpleQuestion(QUESTION_TYPES[0]); } }
+    function renderGrid(gridState, anchorIndices) { for (let i = 0; i < gridState.length; i++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.row = Math.floor(i / GRID_COLS); cell.dataset.col = i % GRID_COLS; if (gridState[i]) { const emojiSpan = document.createElement('span'); emojiSpan.classList.add('emoji', 'immobile'); emojiSpan.textContent = gridState[i]; if (anchorIndices.includes(i)) cell.dataset.anchor = "true"; cell.appendChild(emojiSpan); } gameGrid.appendChild(cell); } }
+    function checkAnswer(droppedCell) { if (!draggedElement) return false; const questionType = draggedElement.dataset.questionType; const droppedRow = parseInt(droppedCell.dataset.row); const droppedCol = parseInt(droppedCell.dataset.col); const anchorCells = gameGrid.querySelectorAll('.grid-cell[data-anchor="true"]'); if (anchorCells.length === 0) { return false; } if (questionType === 'between') { if (anchorCells.length < 2) { return false; } const r1 = parseInt(anchorCells[0].dataset.row), c1 = parseInt(anchorCells[0].dataset.col); const r2 = parseInt(anchorCells[1].dataset.row), c2 = parseInt(anchorCells[1].dataset.col); if (c1 === c2) { return droppedCol === c1 && droppedRow > Math.min(r1, r2) && droppedRow < Math.max(r1, r2); } else if (r1 === r2) { return droppedRow === r1 && droppedCol > Math.min(c1, c2) && droppedCol < Math.max(c1, c2); } } else { const anchorRow = parseInt(anchorCells[0].dataset.row); const anchorCol = parseInt(anchorCells[0].dataset.col); return checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType); } return false; }
     function showFeedback(isCorrect) { feedbackIcon.textContent = isCorrect ? '✓' : '✗'; feedbackIcon.className = 'feedback-icon ' + (isCorrect ? 'correct' : 'wrong'); feedbackOverlay.classList.remove('hidden'); isChecking = true; setTimeout(() => { feedbackOverlay.classList.add('hidden'); if (isCorrect) { generateQuestion(); } isChecking = false; }, 800); }
     function handleDrop(target) { if (isChecking) return; const cell = target ? target.closest('.grid-cell') : null; const isAnswerCorrect = cell && !cell.hasChildNodes() && checkAnswer(cell); if (isAnswerCorrect) { playSound('correct'); score += 10; updateStatus(); const tempEmoji = draggedElement.cloneNode(true); tempEmoji.classList.remove('dragging'); cell.appendChild(tempEmoji); if (draggedElement.parentElement) { draggedElement.parentElement.removeChild(draggedElement); } showFeedback(true); } else { if (draggedElement) { playSound('wrong'); showFeedback(false); } } }
+    function generateSimpleQuestion(question) { let [subjectEmoji, anchorEmoji] = getRandomItems(TARGET_EMOJIS, 2); let anchorRow, anchorCol, anchorIndex, possibleSolutionCells = []; while (possibleSolutionCells.length === 0) { do { anchorRow = Math.floor(Math.random() * GRID_ROWS); anchorCol = Math.floor(Math.random() * GRID_COLS); } while (!isValidAnchorPosition(anchorRow, anchorCol, question.type)); anchorIndex = anchorRow * GRID_COLS + anchorCol; for (let r = 0; r < GRID_ROWS; r++) for (let c = 0; c < GRID_COLS; c++) if (checkAnswerLogic(r, c, anchorRow, anchorCol, question.type)) possibleSolutionCells.push(r * GRID_COLS + c); } const solutionIndex = possibleSolutionCells[Math.floor(Math.random() * possibleSolutionCells.length)]; let availableSpots = []; for (let i = 0; i < GRID_ROWS * GRID_COLS; i++) if (i !== anchorIndex && i !== solutionIndex) availableSpots.push(i); shuffleArray(availableSpots); const gridState = Array(GRID_ROWS * GRID_COLS).fill(null); gridState[anchorIndex] = anchorEmoji; let distractorCount = Math.floor(Math.random() * 3) + 3; const availableDistractors = getRandomItems(DISTRACTOR_EMOJIS, distractorCount); for (let i = 0; i < distractorCount; i++) { const spot = availableSpots.pop(); if (spot !== undefined) gridState[spot] = availableDistractors[i]; } renderGrid(gridState, [anchorIndex]); if (question.format === 'S_V_O') { instructionText.innerHTML = `<span class="emoji">${subjectEmoji}</span> 在 <span class="emoji">${anchorEmoji}</span> 的${TEXT_MAP[question.type]}`; } else { instructionText.innerHTML = `<span class="emoji">${anchorEmoji}</span> 的${TEXT_MAP[question.type]}是 <span class="emoji">${subjectEmoji}</span>`; } const draggableEmoji = createDraggableEmoji(subjectEmoji, question); draggableContainer.appendChild(draggableEmoji); }
+    function generateBetweenQuestion(question) { let [subjectEmoji, anchorEmoji1, anchorEmoji2] = getRandomItems(TARGET_EMOJIS, 3); const possibleTriplets = []; for (let r = 0; r < GRID_ROWS; r++) { for (let c = 0; c <= GRID_COLS - 3; c++) { possibleTriplets.push([{r,c}, {r,c:c+1}, {r,c:c+2}]); } } for (let c = 0; c < GRID_COLS; c++) { for (let r = 0; r <= GRID_ROWS - 3; r++) { possibleTriplets.push([{r,c}, {r:r+1,c}, {r:r+2,c}]); } } const triplet = possibleTriplets[Math.floor(Math.random() * possibleTriplets.length)]; const [pos1, solutionPos, pos2] = triplet; const [anchor1Pos, anchor2Pos] = Math.random() < 0.5 ? [pos1, pos2] : [pos2, pos1]; const anchor1Index = anchor1Pos.r * GRID_COLS + anchor1Pos.c; const anchor2Index = anchor2Pos.r * GRID_COLS + anchor2Pos.c; const solutionIndex = solutionPos.r * GRID_COLS + solutionPos.c; let availableSpots = []; for (let i = 0; i < GRID_ROWS * GRID_COLS; i++) if (i !== anchorIndex && i !== anchor2Index && i !== solutionIndex) availableSpots.push(i); shuffleArray(availableSpots); const gridState = Array(GRID_ROWS * GRID_COLS).fill(null); gridState[anchor1Index] = anchorEmoji1; gridState[anchor2Index] = anchorEmoji2; let distractorCount = Math.floor(Math.random() * 2) + 2; const availableDistractors = getRandomItems(DISTRACTOR_EMOJIS, distractorCount); for (let i = 0; i < distractorCount; i++) { const spot = availableSpots.pop(); if (spot !== undefined) gridState[spot] = availableDistractors[i]; } renderGrid(gridState, [anchor1Index, anchor2Index]); instructionText.innerHTML = `<span class="emoji">${subjectEmoji}</span> 在 <span class="emoji">${anchorEmoji1}</span> 和 <span class="emoji">${anchorEmoji2}</span> 之間`; const draggableEmoji = createDraggableEmoji(subjectEmoji, question); draggableContainer.appendChild(draggableEmoji); }
     function handleDragStart(e) { if (isChecking) { e.preventDefault(); return; } draggedElement = e.target; setTimeout(() => { if (draggedElement) draggedElement.style.visibility = 'hidden'; }, 0); }
     function handleDragEnd() { if (draggedElement) { draggedElement.style.visibility = 'visible'; } draggedElement = null; }
     function handleTouchStart(e) { if (isChecking) { e.preventDefault(); return; } e.preventDefault(); draggedElement = e.target; const touch = e.touches[0]; initialX = touch.clientX; initialY = touch.clientY; draggedElement.classList.add('dragging'); document.addEventListener('touchmove', handleTouchMove, { passive: false }); document.addEventListener('touchend', handleTouchEnd); }
@@ -116,6 +65,7 @@
     function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; } }
     function isValidAnchorPosition(row, col, type) { switch (type) { case 'above': return row > 0; case 'below': return row < GRID_ROWS - 1; case 'left': return col > 0; case 'right': return col < GRID_COLS - 1; default: return true; } }
     
+    // *** 關鍵修正：恢復 DOMContentLoaded 事件綁定 ***
     document.addEventListener('DOMContentLoaded', populateStudentIds);
     gameGrid.addEventListener('dragover', e => e.preventDefault());
     gameGrid.addEventListener('drop', e => { e.preventDefault(); handleDrop(e.target); handleDragEnd(); });
