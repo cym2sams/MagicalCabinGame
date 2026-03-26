@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v4.5</title>
+    <title>數學遊戲：森林裡的奇妙小屋 v5.0</title>
     <style>
-        /* CSS 與 v4.4 完全相同，此處省略以保持簡潔 */
+        /* CSS 與 v4.5 完全相同，此處省略以保持簡潔 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
         :root { font-size: 2.0vmin; --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3; --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F; --font-family: 'Noto Sans TC', sans-serif; --container-bg: rgba(232, 221, 203, 0.85); }
         body { font-family: var(--font-family); background-image: url('my_background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; color: var(--cabin-frame-color); display: flex; justify-content: center; align-items: flex-start; padding: 5vh 5vw; min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box; }
@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-    <!-- HTML 結構與 v4.4 完全相同 -->
+    <!-- HTML 結構與 v4.5 完全相同 -->
     <div class="game-container hidden" id="game-main-interface"> <div class="info-panel"> <header><h1>森林裡的奇妙小屋</h1></header> <div class="status-bar"><div id="timer">遊戲時間: 60</div><div id="score">分數: 0</div></div> <div class="instruction-area" id="instruction-text"></div> </div> <div class="content-area"> <div class="game-grid" id="game-grid"></div> <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div> </div> </div>
     <div class="game-overlay" id="login-screen"><h2>歡迎來到奇妙小屋</h2><div class="login-form"><div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div><div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div></div><div id="login-error"></div><button class="game-button" id="login-button">確定</button></div>
     <div class="game-overlay hidden" id="instruction-screen"><h2>遊戲規則</h2><p>在 60 秒內，根據上方的指令，將下方的水果拖到小屋中正確的位置。答對加 10 分並進入下一題，答錯會彈回原位，直到答對為止。看看你有多快！</p><button class="game-button" id="ready-button">準備好了！</button></div>
@@ -27,11 +27,9 @@
     <div class="feedback-overlay hidden" id="feedback-overlay"><div class="feedback-icon" id="feedback-icon"></div></div>
 
     <script>
-    // --- 版本 4.5 ---
+    // --- 版本 5.0 ---
     
-    // *** 新增：開發者調試模式開關 ***
-    const IS_DEBUG_MODE = true; // 設定為 true 來在控制台查看題目類型
-
+    const IS_DEBUG_MODE = true; 
     const playerRank = document.getElementById('player-rank'), feedbackOverlay = document.getElementById('feedback-overlay'), feedbackIcon = document.getElementById('feedback-icon'), gameMainInterface = document.getElementById('game-main-interface'), loginScreen = document.getElementById('login-screen'), instructionScreen = document.getElementById('instruction-screen'), endScreen = document.getElementById('end-screen'), classSelect = document.getElementById('class-select'), studentIdSelect = document.getElementById('student-id-select'), loginButton = document.getElementById('login-button'), loginError = document.getElementById('login-error'), readyButton = document.getElementById('ready-button'), replayButton = document.getElementById('replay-button'), timerDisplay = document.getElementById('timer'), scoreDisplay = document.getElementById('score'), instructionText = document.getElementById('instruction-text'), gameGrid = document.getElementById('game-grid'), draggableContainer = document.getElementById('draggable-emoji-container'), endMessage = document.getElementById('end-message'), leaderboardContainer = document.getElementById('leaderboard-container');
     const GRID_ROWS = 3, GRID_COLS = 4, TOTAL_TIME = 60; let score = 0, timer = TOTAL_TIME, timerInterval, currentUser = null; const TARGET_EMOJIS = ['🍎', '🍊', '🍋', '🍐', '🍏', '🥭', '🥥', '🍅', '🥝', '🍑']; const DISTRACTOR_EMOJIS = ['🍌', '🍓', '🍇', '🍍', '🍉', '🍒', '🍆', '🥕', '🌽', '🥦']; 
     const QUESTION_TYPES = [ { type: 'above', format: 'S_V_O' }, { type: 'below', format: 'S_V_O' }, { type: 'left',  format: 'S_V_O' }, { type: 'right', format: 'S_V_O' }, { type: 'above', format: 'O_V_S' }, { type: 'below', format: 'O_V_S' }, { type: 'left',  format: 'O_V_S' }, { type: 'right', format: 'O_V_S' }, { type: 'between', format: 'S_V_O' }, { type: 'between', format: 'S_V_O' }, { type: 'between', format: 'S_V_O' }]; const TEXT_MAP = { above: '上面', below: '下面', left: '左面', right: '右面', between: '之間' };
@@ -40,14 +38,13 @@
     function populateStudentIds() { for (let i = 1; i <= 25; i++) { const option = document.createElement('option'); option.value = i; option.textContent = i; studentIdSelect.appendChild(option); } }
     function handleLogin() { const className = classSelect.value; const studentId = studentIdSelect.value; if (!className || !studentId) { loginError.textContent = '請選擇班別和學號！'; return; } currentUser = { class: className, id: studentId }; loginError.textContent = ''; playSound('click'); loginScreen.classList.add('hidden'); instructionScreen.classList.remove('hidden'); }
     function startGame() { playSound('click'); instructionScreen.classList.add('hidden'); endScreen.classList.add('hidden'); gameMainInterface.classList.remove('hidden'); score = 0; timer = TOTAL_TIME; updateStatus(); generateQuestion(); clearInterval(timerInterval); timerInterval = setInterval(() => { timer--; updateStatus(); if (timer <= 5 && timer > 0) playSound('tick'); if (timer <= 0) endGame(); }, 1000); }
-    function endGame() { clearInterval(timerInterval); playSound('gameOver'); gameMainInterface.classList.add('hidden'); const correctAnswers = score / 10; endMessage.innerHTML = `你在 ${TOTAL_TIME} 秒內答對了 ${correctAnswers} 題，總分是 ${score}！`; saveScore(currentUser.class, currentUser.id, score); displayLeaderboard(); endScreen.classList.remove('hidden'); }
+    function endGame() { clearInterval(timerInterval); playSound('gameOver'); gameMainInterface.classList.add('hidden'); const correctAnswers = score / 10; endMessage.innerHTML = `你在 ${TOTAL_TIME} 秒內答對了 ${correctAnswers} 題，<br>總分是 ${score}！`; saveScore(currentUser.class, currentUser.id, score); displayLeaderboard(); endScreen.classList.remove('hidden'); }
     function displayLeaderboard() { const leaderboard = getLeaderboard(); let html = '<table class="leaderboard"><thead><tr><th>排名</th><th>班別</th><th>學號</th><th>分數</th></tr></thead><tbody>'; let currentPlayerRank = -1; if (leaderboard.length === 0) { html += '<tr><td colspan="4">暫無記錄</td></tr>'; } else { leaderboard.forEach((player, index) => { const rank = index + 1; const isCurrentUser = player.class === currentUser.class && player.id === currentUser.id; if (isCurrentUser) { currentPlayerRank = rank; } html += `<tr class="${isCurrentUser ? 'current-player' : ''}"><td>${rank}</td><td>${player.class}</td><td>${player.id}</td><td>${player.score}</td></tr>`; }); } html += '</tbody></table>'; leaderboardContainer.innerHTML = html; if (currentPlayerRank > 0) { playerRank.textContent = `你現時排行第 ${currentPlayerRank} 位`; } else { playerRank.textContent = ''; } }
     function replayGame() { playSound('click'); endScreen.classList.add('hidden'); instructionScreen.classList.remove('hidden'); }
     function updateStatus() { timerDisplay.textContent = `遊戲時間: ${timer}`; scoreDisplay.textContent = `分數: ${score}`; }
     function saveScore(className, studentId, score) { const leaderboard = getLeaderboard(), playerIndex = leaderboard.findIndex(p => p.class === className && p.id === studentId); if (playerIndex > -1) { if (score > leaderboard[playerIndex].score) { leaderboard[playerIndex].score = score; } } else { leaderboard.push({ class: className, id: studentId, score: score }); } localStorage.setItem('mathGameLeaderboard', JSON.stringify(leaderboard)); }
     function getLeaderboard() { const data = localStorage.getItem('mathGameLeaderboard'); return (data ? JSON.parse(data) : []).sort((a, b) => b.score - a.score); }
     
-    // --- 7. 題目與拖放邏輯 (*** 版本 4.5 穩定性終極修正 ***) ---
     let draggedElement = null; let isChecking = false; let initialX = 0, initialY = 0;
     function generateQuestion() { gameGrid.innerHTML = ''; draggableContainer.innerHTML = ''; const currentQuestion = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)]; if (IS_DEBUG_MODE) { console.log('題目類型:', currentQuestion.type); } try { if (currentQuestion.type === 'between') { generateBetweenQuestion(currentQuestion); } else { generateSimpleQuestion(currentQuestion); } } catch (error) { console.error("生成題目時發生錯誤:", error, "將生成一個簡單題目作為備用。"); generateSimpleQuestion(QUESTION_TYPES[0]); } }
     function renderGrid(gridState, anchorIndices) { for (let i = 0; i < gridState.length; i++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.row = Math.floor(i / GRID_COLS); cell.dataset.col = i % GRID_COLS; if (gridState[i]) { const emojiSpan = document.createElement('span'); emojiSpan.classList.add('emoji', 'immobile'); emojiSpan.textContent = gridState[i]; if (anchorIndices.includes(i)) cell.dataset.anchor = "true"; cell.appendChild(emojiSpan); } gameGrid.appendChild(cell); } }
@@ -65,9 +62,13 @@
             if (anchorCells.length < 2) return false;
             const r1 = parseInt(anchorCells[0].dataset.row), c1 = parseInt(anchorCells[0].dataset.col);
             const r2 = parseInt(anchorCells[1].dataset.row), c2 = parseInt(anchorCells[1].dataset.col);
-            if (c1 === c2) { // 垂直
+            
+            // 垂直之間，使用 Math.min/max 確保順序無關
+            if (c1 === c2) {
                 return droppedCol === c1 && droppedRow > Math.min(r1, r2) && droppedRow < Math.max(r1, r2);
-            } else if (r1 === r2) { // 水平
+            } 
+            // 水平之間，使用 Math.min/max 確保順序無關
+            else if (r1 === r2) {
                 return droppedRow === r1 && droppedCol > Math.min(c1, c2) && droppedCol < Math.max(c1, c2);
             }
         } else {
@@ -75,7 +76,7 @@
             const anchorCol = parseInt(anchorCells[0].dataset.col);
             return checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType);
         }
-        return false; // 如果 'between' 判斷沒有 return，確保有返回值
+        return false;
     }
 
     // 其他函數與 v4.4 保持一致
@@ -94,7 +95,6 @@
     function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; } }
     function isValidAnchorPosition(row, col, type) { switch (type) { case 'above': return row > 0; case 'below': return row < GRID_ROWS - 1; case 'left': return col > 0; case 'right': return col < GRID_COLS - 1; default: return true; } }
     
-    // 8. 事件綁定
     document.addEventListener('DOMContentLoaded', populateStudentIds);
     gameGrid.addEventListener('dragover', e => e.preventDefault());
     gameGrid.addEventListener('drop', e => { e.preventDefault(); handleDrop(e.target); handleDragEnd(); });
