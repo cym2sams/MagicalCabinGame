@@ -3,58 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v1.8</title>
+    <title>數學遊戲：森林裡的奇妙小屋 v1.9</title>
     <style>
-        /* CSS 與 v1.7 完全相同，此處省略以保持簡潔 */
+        /* --- 版本 1.9 CSS 響應式改良 --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
-        :root { --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3; --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F; --font-family: 'Noto Sans TC', sans-serif; }
+
+        :root {
+            --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3;
+            --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F;
+            --font-family: 'Noto Sans TC', sans-serif;
+            /* 使用 vmin 設置基礎字體大小，實現等比縮放 */
+            font-size: 2.2vmin;
+        }
+
         body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--cabin-frame-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; touch-action: none; }
-        .game-container { width: 95%; max-width: 800px; height: 95vh; max-height: 1000px; background: linear-gradient(145deg, #ffffff, #e6e2d6); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 5px solid var(--cabin-frame-color); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
-        header { text-align: center; padding-bottom: 10px; }
-        h1 { margin: 0; font-size: 2.5em; }
-        .status-bar { display: flex; justify-content: space-around; font-size: 2em; font-weight: bold; padding: 10px; background-color: rgba(255, 255, 255, 0.5); border-radius: 10px; margin-bottom: 15px; }
-        .instruction-area { text-align: center; font-size: 2.2em; font-weight: bold; padding: 15px; min-height: 80px; }
+        
+        .game-container { width: 95%; height: 95%; max-width: 100vh; max-height: 100vw; background: linear-gradient(145deg, #ffffff, #e6e2d6); border-radius: 20px; box-shadow: 0 1rem 3rem rgba(0,0,0,0.15); border: 0.5rem solid var(--cabin-frame-color); display: flex; flex-direction: column; padding: 2rem; box-sizing: border-box; }
+        
+        header { text-align: center; padding-bottom: 1rem; }
+        h1 { margin: 0; font-size: 2.5rem; }
+        .status-bar { display: flex; justify-content: space-around; font-size: 1.8rem; font-weight: bold; padding: 1rem; background-color: rgba(255, 255, 255, 0.5); border-radius: 1rem; margin-bottom: 1rem; }
+        .instruction-area { text-align: center; font-size: 2rem; font-weight: bold; padding: 1rem; min-height: 4rem; }
         .instruction-area .emoji { font-size: 1.2em; vertical-align: middle; }
-        .game-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px; flex-grow: 1; background-color: var(--cabin-frame-color); border: 10px solid var(--cabin-frame-color); border-radius: 15px; padding: 10px; }
-        .grid-cell { background-color: var(--cabin-inner-color); border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 3em; user-select: none; position: relative; }
-        .emoji { cursor: grab; user-select: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+
+        /* 新增：包裹遊戲核心區和拖動區的容器 */
+        .main-game-area {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            gap: 1rem;
+        }
+
+        .game-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1rem; flex-grow: 1; background-color: var(--cabin-frame-color); border: 1rem solid var(--cabin-frame-color); border-radius: 1.5rem; padding: 1rem; }
+        .grid-cell { background-color: var(--cabin-inner-color); border-radius: 1rem; display: flex; justify-content: center; align-items: center; font-size: 3rem; user-select: none; position: relative; }
+        .emoji { cursor: grab; user-select: none; text-shadow: 0.2rem 0.2rem 0.4rem rgba(0,0,0,0.2); }
         .emoji.dragging { opacity: 0.5; cursor: grabbing; position: absolute; z-index: 1000; }
         .emoji.immobile { cursor: not-allowed; }
-        .draggable-object-area { display: flex; justify-content: center; align-items: center; padding: 20px; min-height: 120px; }
-        #draggable-emoji-container { padding: 10px; display: flex; justify-content: center; align-items: center; border: 3px dashed var(--cabin-frame-color); border-radius: 10px; background-color: #FFF8E1; }
-        #draggable-emoji-container .emoji { font-size: 4.5em; line-height: 1; }
-        .game-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(248, 244, 230, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; z-index: 100; transition: opacity 0.5s; padding: 20px; box-sizing: border-box; }
+        .draggable-object-area { display: flex; justify-content: center; align-items: center; padding: 1rem; min-height: 10rem; }
+        #draggable-emoji-container { padding: 1rem; display: flex; justify-content: center; align-items: center; border: 0.3rem dashed var(--cabin-frame-color); border-radius: 1rem; background-color: #FFF8E1; }
+        #draggable-emoji-container .emoji { font-size: 4.5rem; line-height: 1; }
+        
+        .game-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(248, 244, 230, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; z-index: 100; transition: opacity 0.5s; padding: 2rem; box-sizing: border-box; }
         .game-overlay.hidden { opacity: 0; pointer-events: none; }
-        .game-overlay h2 { font-size: 3em; margin-bottom: 20px; }
-        .game-overlay p { font-size: 1.5em; max-width: 600px; line-height: 1.6; }
-        .login-form { display: flex; flex-direction: column; gap: 20px; font-size: 1.8em; }
+        .game-overlay h2 { font-size: 3rem; margin-bottom: 2rem; }
+        .game-overlay p { font-size: 1.5rem; max-width: 60rem; line-height: 1.6; }
+        .login-form { display: flex; flex-direction: column; gap: 2rem; font-size: 1.8rem; }
         .form-group { display: flex; flex-direction: column; align-items: flex-start; }
-        .form-group label { margin-bottom: 5px; font-weight: bold; }
-        .form-group select, .form-group input { font-size: 1em; padding: 10px; border-radius: 8px; border: 2px solid var(--cabin-frame-color); width: 300px; font-family: var(--font-family); }
-        #login-error { color: var(--emphasis-color); font-weight: bold; height: 20px; }
-        #leaderboard-container { width: 90%; max-width: 600px; margin-top: 20px; max-height: 40vh; overflow-y: auto; }
-        .leaderboard { width: 100%; border-collapse: collapse; font-size: 1.2em; }
-        .leaderboard th, .leaderboard td { padding: 10px; text-align: center; border-bottom: 2px solid var(--cabin-inner-color); }
+        .form-group label { margin-bottom: 0.5rem; font-weight: bold; }
+        .form-group select { font-size: 1em; padding: 1rem; border-radius: 0.8rem; border: 0.2rem solid var(--cabin-frame-color); width: 30rem; font-family: var(--font-family); }
+        #login-error { color: var(--emphasis-color); font-weight: bold; height: 2rem; }
+        #leaderboard-container { width: 90%; max-width: 60rem; margin-top: 2rem; max-height: 40vh; overflow-y: auto; }
+        .leaderboard { width: 100%; border-collapse: collapse; font-size: 1.2rem; }
+        .leaderboard th, .leaderboard td { padding: 1rem; text-align: center; border-bottom: 0.2rem solid var(--cabin-inner-color); }
         .leaderboard th { background-color: var(--cabin-frame-color); color: var(--bg-color); }
         .leaderboard tr.current-player { background-color: var(--highlight-color) !important; font-weight: bold; }
-        .game-button { font-family: var(--font-family); font-size: 2em; font-weight: bold; padding: 15px 40px; border-radius: 15px; border: none; background-color: var(--button-color); color: white; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.2s, background-color 0.2s; margin-top: 20px; }
+        .game-button { font-family: var(--font-family); font-size: 2rem; font-weight: bold; padding: 1.5rem 4rem; border-radius: 1.5rem; border: none; background-color: var(--button-color); color: white; cursor: pointer; box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.2); transition: transform 0.2s; margin-top: 2rem; }
         .game-button:hover { transform: scale(1.05); }
+
+        /* 橫向模式媒體查詢 */
+        @media (orientation: landscape) {
+            :root {
+                /* 在橫向模式下，基礎字體可以稍微小一點 */
+                font-size: 2vh;
+            }
+            .game-container {
+                padding: 1.5rem;
+            }
+            header {
+                padding-bottom: 0.5rem;
+            }
+            h1 {
+                font-size: 2rem; /* 縮小標題，節省垂直空間 */
+            }
+            .status-bar, .instruction-area {
+                font-size: 1.5rem;
+                padding: 0.5rem;
+                margin-bottom: 0.5rem;
+                min-height: auto;
+            }
+            /* 讓遊戲區和拖動區並排顯示 */
+            .main-game-area {
+                flex-direction: row;
+                align-items: center;
+            }
+            .draggable-object-area {
+                min-height: auto;
+                padding: 2rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- HTML 結構 -->
+    <!-- *** 版本 1.9 HTML 結構微調 *** -->
     <div class="game-container" id="game-main-interface" style="display:none;">
         <header><h1>森林裡的奇妙小屋</h1></header>
         <div class="status-bar"><div id="timer">遊戲時間: 60</div><div id="score">分數: 0</div></div>
         <div class="instruction-area" id="instruction-text"></div>
-        <div class="game-grid" id="game-grid"></div>
-        <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div>
+        <!-- 新增的包裹容器 -->
+        <div class="main-game-area">
+            <div class="game-grid" id="game-grid"></div>
+            <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div>
+        </div>
     </div>
+    
+    <!-- 其他 HTML 覆蓋層與 v1.8 相同 -->
     <div class="game-overlay" id="login-screen">
         <h2>歡迎來到奇妙小屋</h2>
         <div class="login-form">
             <div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div>
-            <!-- *** 版本 1.8 HTML 改良 *** -->
             <div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div>
         </div>
         <div id="login-error"></div><button class="game-button" id="login-button">確定</button>
@@ -67,132 +123,31 @@
     </div>
 
     <script>
-    // --- 版本 1.8 ---
-    
-    // 1. DOM 元素獲取
+    // --- 版本 1.9 ---
+    // JavaScript 部分與 v1.8 完全相同，因為所有改動都在 CSS 和 HTML。
+    // 這裡貼上完整的 v1.8 JavaScript 程式碼以確保遊戲能完整運行。
     const gameMainInterface = document.getElementById('game-main-interface'), loginScreen = document.getElementById('login-screen'), instructionScreen = document.getElementById('instruction-screen'), endScreen = document.getElementById('end-screen'), classSelect = document.getElementById('class-select'), studentIdSelect = document.getElementById('student-id-select'), loginButton = document.getElementById('login-button'), loginError = document.getElementById('login-error'), readyButton = document.getElementById('ready-button'), replayButton = document.getElementById('replay-button'), timerDisplay = document.getElementById('timer'), scoreDisplay = document.getElementById('score'), instructionText = document.getElementById('instruction-text'), gameGrid = document.getElementById('game-grid'), draggableContainer = document.getElementById('draggable-emoji-container'), endMessage = document.getElementById('end-message'), leaderboardContainer = document.getElementById('leaderboard-container');
-    
-    // 2-4. 核心設定, 資源, 音效 (與 v1.7 相同)
     const GRID_ROWS = 3, GRID_COLS = 4, TOTAL_TIME = 60;
     let score = 0, timer = TOTAL_TIME, timerInterval, currentUser = null;
     const TARGET_EMOJIS = ['🍎', '🍊', '🍋', '🍐', '🍏', '🥭', '🥥', '🍅'], DISTRACTOR_EMOJIS = ['🍌', '🍓', '🍇', '🍍', '🍉', '🥝', '🍑', '🍒', '🍆', '🥕'], QUESTION_TYPES = [{ type: 'above', text: '在 ... 的上面' }, { type: 'below', text: '在 ... 的下面' }, { type: 'left',  text: '在 ... 的左面' }, { type: 'right', text: '在 ... 的右面' }];
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) { if (!audioContext) return; if (audioContext.state === 'suspended') { audioContext.resume(); } const o = audioContext.createOscillator(), g = audioContext.createGain(); o.connect(g); g.connect(audioContext.destination); switch (type) { case 'click': o.type = 'sine'; o.frequency.setValueAtTime(440, audioContext.currentTime); g.gain.setValueAtTime(0.5, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); break; case 'correct': o.type = 'triangle'; o.frequency.setValueAtTime(523.25, audioContext.currentTime); o.frequency.linearRampToValueAtTime(1046.50, audioContext.currentTime + 0.15); g.gain.setValueAtTime(0.3, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); break; case 'wrong': o.type = 'square'; o.frequency.setValueAtTime(220, audioContext.currentTime); g.gain.setValueAtTime(0.3, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3); break; case 'tick': o.type = 'sine'; o.frequency.setValueAtTime(880, audioContext.currentTime); g.gain.setValueAtTime(0.2, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1); break; case 'gameOver': o.type = 'sawtooth'; o.frequency.setValueAtTime(440, audioContext.currentTime); o.frequency.linearRampToValueAtTime(220, audioContext.currentTime + 0.5); g.gain.setValueAtTime(0.4, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); break; } o.start(); o.stop(audioContext.currentTime + 0.5); }
-    
-    // --- 5. 遊戲流程控制 (*** 版本 1.8 改良 ***) ---
-    function populateStudentIds() {
-        for (let i = 1; i <= 25; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
-            studentIdSelect.appendChild(option);
-        }
-    }
-
-    function handleLogin() {
-        const className = classSelect.value;
-        const studentId = studentIdSelect.value;
-        if (!className || !studentId) {
-            loginError.textContent = '請選擇班別和學號！';
-            return;
-        }
-        currentUser = { class: className, id: studentId };
-        loginError.textContent = '';
-        playSound('click');
-        loginScreen.classList.add('hidden');
-        instructionScreen.classList.remove('hidden');
-    }
-    // 其他流程函數 (與 v1.7 相同)
+    function populateStudentIds() { for (let i = 1; i <= 25; i++) { const option = document.createElement('option'); option.value = i; option.textContent = i; studentIdSelect.appendChild(option); } }
+    function handleLogin() { const className = classSelect.value; const studentId = studentIdSelect.value; if (!className || !studentId) { loginError.textContent = '請選擇班別和學號！'; return; } currentUser = { class: className, id: studentId }; loginError.textContent = ''; playSound('click'); loginScreen.classList.add('hidden'); instructionScreen.classList.remove('hidden'); }
     function startGame() { playSound('click'); instructionScreen.classList.add('hidden'); endScreen.classList.add('hidden'); gameMainInterface.style.display = 'flex'; score = 0; timer = TOTAL_TIME; updateStatus(); generateQuestion(); clearInterval(timerInterval); timerInterval = setInterval(() => { timer--; updateStatus(); if (timer <= 5 && timer > 0) playSound('tick'); if (timer <= 0) endGame(); }, 1000); }
     function endGame() { clearInterval(timerInterval); playSound('gameOver'); gameMainInterface.style.display = 'none'; const correctAnswers = score / 10; endMessage.innerHTML = `你在 ${TOTAL_TIME} 秒內答對了 ${correctAnswers} 題，<br>總分是 ${score}！`; saveScore(currentUser.class, currentUser.id, score); displayLeaderboard(); endScreen.classList.remove('hidden'); }
     function replayGame() { playSound('click'); endScreen.classList.add('hidden'); instructionScreen.classList.remove('hidden'); }
     function updateStatus() { timerDisplay.textContent = `遊戲時間: ${timer}`; scoreDisplay.textContent = `分數: ${score}`; }
-
-    // 6. 排行榜邏輯 (與 v1.7 相同)
     function saveScore(className, studentId, score) { const leaderboard = getLeaderboard(), playerIndex = leaderboard.findIndex(p => p.class === className && p.id === studentId); if (playerIndex > -1) { if (score > leaderboard[playerIndex].score) { leaderboard[playerIndex].score = score; } } else { leaderboard.push({ class: className, id: studentId, score: score }); } localStorage.setItem('mathGameLeaderboard', JSON.stringify(leaderboard)); }
     function getLeaderboard() { const data = localStorage.getItem('mathGameLeaderboard'); return (data ? JSON.parse(data) : []).sort((a, b) => b.score - a.score); }
     function displayLeaderboard() { const leaderboard = getLeaderboard(); let html = '<table class="leaderboard"><thead><tr><th>排名</th><th>班別</th><th>學號</th><th>分數</th></tr></thead><tbody>'; if (leaderboard.length === 0) { html += '<tr><td colspan="4">暫無記錄</td></tr>'; } else { leaderboard.forEach((player, index) => { const isCurrentUser = player.class === currentUser.class && player.id === currentUser.id; html += `<tr class="${isCurrentUser ? 'current-player' : ''}"><td>${index + 1}</td><td>${player.class}</td><td>${player.id}</td><td>${player.score}</td></tr>`; }); } html += '</tbody></table>'; leaderboardContainer.innerHTML = html; }
-
-    // --- 7. 題目與拖放邏輯 (*** 版本 1.8 改良 ***) ---
     let draggedElement = null;
-
-    function handleDragStart(e) {
-        draggedElement = e.target;
-        // 使用 setTimeout 確保在瀏覽器捕獲拖動圖像後再隱藏原始元素
-        setTimeout(() => {
-            if (draggedElement) draggedElement.style.visibility = 'hidden';
-        }, 0);
-    }
-    
-    // *** 關鍵修正：簡化 handleDragEnd，只負責恢復可見性 ***
-    function handleDragEnd() {
-        if (draggedElement) {
-            draggedElement.style.visibility = 'visible';
-        }
-        draggedElement = null;
-    }
-
-    function handleTouchStart(e) {
-        e.preventDefault();
-        draggedElement = e.target;
-        draggedElement.classList.add('dragging');
-        draggedElement.style.position = 'absolute';
-        draggedElement.style.pointerEvents = 'none';
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd);
-        handleTouchMove(e);
-    }
-    
+    function handleDragStart(e) { draggedElement = e.target; setTimeout(() => { if (draggedElement) draggedElement.style.visibility = 'hidden'; }, 0); }
+    function handleDragEnd() { if (draggedElement) { draggedElement.style.visibility = 'visible'; } draggedElement = null; }
+    function handleTouchStart(e) { e.preventDefault(); draggedElement = e.target; draggedElement.classList.add('dragging'); draggedElement.style.position = 'absolute'; draggedElement.style.pointerEvents = 'none'; document.addEventListener('touchmove', handleTouchMove, { passive: false }); document.addEventListener('touchend', handleTouchEnd); handleTouchMove(e); }
     function handleTouchMove(e) { e.preventDefault(); if (!draggedElement) return; const touch = e.touches[0]; draggedElement.style.left = (touch.pageX - draggedElement.offsetWidth / 2) + 'px'; draggedElement.style.top = (touch.pageY - draggedElement.offsetHeight / 2) + 'px'; }
-
-    // *** 關鍵修正：簡化 handleTouchEnd ***
-    function handleTouchEnd(e) {
-        if (!draggedElement) return;
-
-        // 必須先恢復樣式，才能正確檢測 dropTarget
-        draggedElement.style.visibility = 'hidden';
-        const dropTarget = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        
-        handleDrop(dropTarget);
-
-        // 無論成功與否，都恢復原始元素的樣式和可見性
-        draggedElement.style.position = '';
-        draggedElement.style.left = '';
-        draggedElement.style.top = '';
-        draggedElement.style.pointerEvents = 'auto';
-        draggedElement.style.visibility = 'visible';
-        draggedElement.classList.remove('dragging');
-        
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
-        draggedElement = null;
-    }
-
-    // *** 關鍵修正：簡化 handleDrop ***
-    function handleDrop(target) {
-        const cell = target ? target.closest('.grid-cell') : null;
-
-        if (cell && !cell.hasChildNodes() && checkAnswer(cell)) {
-            // 答對：這是唯一會移除原始水果的路徑
-            playSound('correct');
-            score += 10;
-            updateStatus();
-            const tempEmoji = draggedElement.cloneNode(true);
-            tempEmoji.classList.remove('dragging');
-            cell.appendChild(tempEmoji);
-            if (draggedElement.parentElement) {
-                draggedElement.parentElement.removeChild(draggedElement);
-            }
-            setTimeout(generateQuestion, 400);
-        } else {
-            // 答錯或無效放置：只播放聲音，不做任何事，讓 drag/touch end 事件去恢復水果
-            if (draggedElement) {
-                playSound('wrong');
-            }
-        }
-    }
-    
-    // 其他函數 (與 v1.6/v1.7 相同，未作修改)
+    function handleTouchEnd(e) { if (!draggedElement) return; draggedElement.style.visibility = 'hidden'; const dropTarget = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY); handleDrop(dropTarget); draggedElement.style.position = ''; draggedElement.style.left = ''; draggedElement.style.top = ''; draggedElement.style.pointerEvents = 'auto'; draggedElement.style.visibility = 'visible'; draggedElement.classList.remove('dragging'); document.removeEventListener('touchmove', handleTouchMove); document.removeEventListener('touchend', handleTouchEnd); draggedElement = null; }
+    function handleDrop(target) { const cell = target ? target.closest('.grid-cell') : null; if (cell && !cell.hasChildNodes() && checkAnswer(cell)) { playSound('correct'); score += 10; updateStatus(); const tempEmoji = draggedElement.cloneNode(true); tempEmoji.classList.remove('dragging'); cell.appendChild(tempEmoji); if (draggedElement.parentElement) { draggedElement.parentElement.removeChild(draggedElement); } setTimeout(generateQuestion, 400); } else { if (draggedElement) { playSound('wrong'); } } }
     function checkAnswer(droppedCell) { if (!draggedElement) return false; const droppedRow = parseInt(droppedCell.dataset.row); const droppedCol = parseInt(droppedCell.dataset.col); const anchorCell = gameGrid.querySelector('.grid-cell[data-anchor="true"]'); if (!anchorCell) { console.error("在 grid 中找不到 anchorCell！"); return false; } const anchorRow = parseInt(anchorCell.dataset.row); const anchorCol = parseInt(anchorCell.dataset.col); const questionType = draggedElement.dataset.questionType; return checkAnswerLogic(droppedRow, droppedCol, anchorRow, anchorCol, questionType); }
     function generateQuestion() { gameGrid.innerHTML = ''; draggableContainer.innerHTML = ''; const currentQuestion = QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)]; let [subjectEmoji, anchorEmoji] = getRandomItems(TARGET_EMOJIS, 2); let anchorRow, anchorCol, anchorIndex; let possibleSolutionCells = []; while (possibleSolutionCells.length === 0) { do { anchorRow = Math.floor(Math.random() * GRID_ROWS); anchorCol = Math.floor(Math.random() * GRID_COLS); } while (!isValidAnchorPosition(anchorRow, anchorCol, currentQuestion.type)); anchorIndex = anchorRow * GRID_COLS + anchorCol; for (let r = 0; r < GRID_ROWS; r++) { for (let c = 0; c < GRID_COLS; c++) { if (checkAnswerLogic(r, c, anchorRow, anchorCol, currentQuestion.type)) { possibleSolutionCells.push(r * GRID_COLS + c); } } } } const solutionIndex = possibleSolutionCells[Math.floor(Math.random() * possibleSolutionCells.length)]; let availableSpots = []; for (let i = 0; i < GRID_ROWS * GRID_COLS; i++) { if (i !== anchorIndex && i !== solutionIndex) availableSpots.push(i); } shuffleArray(availableSpots); const gridState = Array(GRID_ROWS * GRID_COLS).fill(null); gridState[anchorIndex] = anchorEmoji; let distractorCount = Math.floor(Math.random() * 3) + 3; const availableDistractors = getRandomItems(DISTRACTOR_EMOJIS, distractorCount); for (let i = 0; i < distractorCount; i++) { const spot = availableSpots.pop(); if (spot !== undefined) gridState[spot] = availableDistractors[i]; } for (let i = 0; i < gridState.length; i++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); cell.dataset.row = Math.floor(i / GRID_COLS); cell.dataset.col = i % GRID_COLS; if (gridState[i]) { const emojiSpan = document.createElement('span'); emojiSpan.classList.add('emoji', 'immobile'); emojiSpan.textContent = gridState[i]; if (i === anchorIndex) cell.dataset.anchor = 'true'; cell.appendChild(emojiSpan); } gameGrid.appendChild(cell); } instructionText.innerHTML = `<span class="emoji">${subjectEmoji}</span> ${currentQuestion.text.replace('...', `<span class="emoji">${anchorEmoji}</span>`)}`; const draggableEmoji = createDraggableEmoji(subjectEmoji, currentQuestion); draggableContainer.appendChild(draggableEmoji); }
     function createDraggableEmoji(emoji, question) { const element = document.createElement('span'); element.textContent = emoji; element.classList.add('emoji'); element.draggable = true; element.dataset.questionType = question.type; element.addEventListener('dragstart', handleDragStart); element.addEventListener('touchstart', handleTouchStart, { passive: false }); return element; }
@@ -200,9 +155,7 @@
     function getRandomItems(arr, n) { const shuffled = [...arr].sort(() => 0.5 - Math.random()); return shuffled.slice(0, n); }
     function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; } }
     function isValidAnchorPosition(row, col, type) { switch (type) { case 'above': return row > 0; case 'below': return row < GRID_ROWS - 1; case 'left': return col > 0; case 'right': return col < GRID_COLS - 1; default: return true; } }
-    
-    // --- 8. 事件綁定 ---
-    document.addEventListener('DOMContentLoaded', populateStudentIds); // 頁面加載時填充學號
+    document.addEventListener('DOMContentLoaded', populateStudentIds);
     gameGrid.addEventListener('dragover', e => e.preventDefault());
     gameGrid.addEventListener('drop', e => { e.preventDefault(); handleDrop(e.target); handleDragEnd(); });
     loginButton.addEventListener('click', handleLogin);
