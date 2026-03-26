@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v4.1</title>
+    <title>數學遊戲：森林裡的奇妙小屋 v3.6</title>
     <style>
-        /* --- 版本 4.1 背景圖優化 --- */
+        /* --- 版本 3.6 最終視覺優化 --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
         :root { 
             font-size: 2.2vmin; 
@@ -14,33 +14,24 @@
             --font-family: 'Noto Sans TC', sans-serif; 
         }
         
-        /* 關鍵修正：為 body 加入背景圖 */
         body { 
-            font-family: var(--font-family);
-            /* 直接在這裡設定背景圖 */
-            background-image: url('my_background.jpg');
-            background-size: cover; /* 確保圖片填滿整個畫面 */
-            background-position: center; /* 讓圖片居中顯示 */
-            background-repeat: no-repeat; /* 防止圖片重複 */
-
-            color: var(--cabin-frame-color); 
-            display: flex; justify-content: center; align-items: flex-start;
-            padding: 4vh 4vw;
+            font-family: var(--font-family); background-color: var(--bg-color); color: var(--cabin-frame-color); 
+            display: flex; justify-content: center; align-items: center; /* 恢復垂直居中 */
             min-height: 100vh; margin: 0; overflow: hidden; box-sizing: border-box;
+            padding: 2vh 2vw; /* 稍微減小留白，讓主體更大 */
         }
         
         .game-container {
-            width: 100%; height: 100%;
+            width: 100%; height: 95vh; /* 確保高度 */
             max-width: 1200px; max-height: 800px;
-            background: rgba(255, 255, 255, 0.85); /* 增加一層半透明白色背景，讓文字更清晰 */
-            backdrop-filter: blur(4px); /* 模糊背景圖，突出遊戲主體 */
-            border-radius: 20px; box-shadow: 0 1rem 3rem rgba(0,0,0,0.2);
+            background: linear-gradient(145deg, #ffffff, #e6e2d6);
+            border-radius: 20px; box-shadow: 0 1rem 3rem rgba(0,0,0,0.15);
             border: 0.5rem solid var(--cabin-frame-color); box-sizing: border-box;
             display: flex; flex-direction: column;
             padding: 1.5rem;
         }
         
-        /* ... 其他所有樣式與 v4.0 完全相同 ... */
+        /* ... 其他樣式與 v3.5 相同 ... */
         .info-panel { text-align: center; flex-shrink: 0; }
         .content-area { display: flex; flex-direction: column; flex-grow: 1; gap: 1rem; min-height: 0; }
         header { padding-bottom: 0.5rem; } h1 { margin: 0; font-size: 2.2rem; }
@@ -60,11 +51,18 @@
         .feedback-icon.correct { color: #28a745; } .feedback-icon.wrong { color: #dc3545; }
         @keyframes pop-in { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .game-overlay h2 { font-size: 3rem; } .game-button { font-size: 2rem; }
-        @media (orientation: landscape) { :root { font-size: 1.6vh; } .content-area { flex-direction: row; align-items: center; } .game-grid { height: 100%; } .draggable-object-area { padding-left: 1.5rem; } }
+
+        @media (orientation: landscape) {
+            /* 關鍵修正：恢復使用 vmin 作為基準，以獲得更和諧的縮放比例 */
+            :root { font-size: 2.2vmin; }
+            .content-area { flex-direction: row; align-items: center; }
+            .game-grid { height: 100%; }
+            .draggable-object-area { padding-left: 1.5rem; }
+        }
     </style>
 </head>
 <body>
-    <!-- HTML 結構與 v4.0 相同 -->
+    <!-- HTML 結構與 v3.5 相同 -->
     <div class="game-container hidden" id="game-main-interface"> <div class="info-panel"> <header><h1>森林裡的奇妙小屋</h1></header> <div class="status-bar"><div id="timer">遊戲時間: 60</div><div id="score">分數: 0</div></div> <div class="instruction-area" id="instruction-text"></div> </div> <div class="content-area"> <div class="game-grid" id="game-grid"></div> <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div> </div> </div>
     <div class="game-overlay" id="login-screen"><h2>歡迎來到奇妙小屋</h2><div class="login-form"><div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div><div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div></div><div id="login-error"></div><button class="game-button" id="login-button">確定</button></div>
     <div class="game-overlay hidden" id="instruction-screen"><h2>遊戲規則</h2><p>在 60 秒內，根據上方的指令，將下方的水果拖到小屋中正確的位置。答對加 10 分並進入下一題，答錯會彈回原位，直到答對為止。看看你有多快！</p><button class="game-button" id="ready-button">準備好了！</button></div>
@@ -72,8 +70,8 @@
     <div class="feedback-overlay hidden" id="feedback-overlay"><div class="feedback-icon" id="feedback-icon"></div></div>
 
     <script>
-    // --- 版本 4.1 ---
-    // JavaScript 部分與 v4.0 完全相同，因為這次只修改了 CSS 樣式。
+    // --- 版本 3.6 ---
+    // JavaScript 部分與 v3.5/4.0 完全相同，已確認其穩定性。
     const feedbackOverlay = document.getElementById('feedback-overlay'); const feedbackIcon = document.getElementById('feedback-icon'); const gameMainInterface = document.getElementById('game-main-interface'), loginScreen = document.getElementById('login-screen'), instructionScreen = document.getElementById('instruction-screen'), endScreen = document.getElementById('end-screen'), classSelect = document.getElementById('class-select'), studentIdSelect = document.getElementById('student-id-select'), loginButton = document.getElementById('login-button'), loginError = document.getElementById('login-error'), readyButton = document.getElementById('ready-button'), replayButton = document.getElementById('replay-button'), timerDisplay = document.getElementById('timer'), scoreDisplay = document.getElementById('score'), instructionText = document.getElementById('instruction-text'), gameGrid = document.getElementById('game-grid'), draggableContainer = document.getElementById('draggable-emoji-container'), endMessage = document.getElementById('end-message'), leaderboardContainer = document.getElementById('leaderboard-container');
     const GRID_ROWS = 3, GRID_COLS = 4, TOTAL_TIME = 60; let score = 0, timer = TOTAL_TIME, timerInterval, currentUser = null; const TARGET_EMOJIS = ['🍎', '🍊', '🍋', '🍐', '🍏', '🥭', '🥥', '🍅', '🥝', '🍑']; const DISTRACTOR_EMOJIS = ['🍌', '🍓', '🍇', '🍍', '🍉', '🍒', '🍆', '🥕', '🌽', '🥦']; const QUESTION_TYPES = [ { type: 'above', format: 'S_V_O' }, { type: 'below', format: 'S_V_O' }, { type: 'left',  format: 'S_V_O' }, { type: 'right', format: 'S_V_O' }, { type: 'above', format: 'O_V_S' }, { type: 'below', format: 'O_V_S' }, { type: 'left',  format: 'O_V_S' }, { type: 'right', format: 'O_V_S' }, { type: 'between', format: 'S_V_O' }]; const TEXT_MAP = { above: '上面', below: '下面', left: '左面', right: '右面', between: '之間' }; const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) { if (!audioContext) return; if (audioContext.state === 'suspended') { audioContext.resume(); } const o = audioContext.createOscillator(), g = audioContext.createGain(); o.connect(g); g.connect(audioContext.destination); switch (type) { case 'click': o.type = 'sine'; o.frequency.setValueAtTime(440, audioContext.currentTime); g.gain.setValueAtTime(0.5, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); break; case 'correct': o.type = 'triangle'; o.frequency.setValueAtTime(523.25, audioContext.currentTime); o.frequency.linearRampToValueAtTime(1046.50, audioContext.currentTime + 0.15); g.gain.setValueAtTime(0.3, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2); break; case 'wrong': o.type = 'square'; o.frequency.setValueAtTime(220, audioContext.currentTime); g.gain.setValueAtTime(0.3, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3); break; case 'tick': o.type = 'sine'; o.frequency.setValueAtTime(880, audioContext.currentTime); g.gain.setValueAtTime(0.2, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1); break; case 'gameOver': o.type = 'sawtooth'; o.frequency.setValueAtTime(440, audioContext.currentTime); o.frequency.linearRampToValueAtTime(220, audioContext.currentTime + 0.5); g.gain.setValueAtTime(0.4, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5); break; } o.start(); o.stop(audioContext.currentTime + 0.5); }
