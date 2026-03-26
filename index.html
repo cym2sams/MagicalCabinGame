@@ -3,75 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v3.0</title>
+    <title>數學遊戲：森林裡的奇妙小屋 v3.1</title>
     <style>
-        /* --- 版本 3.0 UI/UX 深度優化 --- */
+        /* --- 版本 3.1 終極橫向佈局優化 --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
-        :root { font-size: 2.2vmin; /* ...其他變數與v2.7相同... */ --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3; --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F; --font-family: 'Noto Sans TC', sans-serif; }
+        :root { font-size: 2.2vmin; /* ...其他變數與v3.0相同... */ --bg-color: #F8F4E6; --cabin-frame-color: #8B4513; --cabin-inner-color: #F5DEB3; --button-color: #5CB85C; --highlight-color: #FFD700; --emphasis-color: #D9534F; --font-family: 'Noto Sans TC', sans-serif; }
         body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--cabin-frame-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; touch-action: none; }
         
-        /* 基礎容器樣式 */
+        /* 基礎容器樣式 (直向模式為 Flex 佈局) */
         .game-container { width: 95%; height: 95%; max-width: 100vh; max-height: 100vw; background: linear-gradient(145deg, #ffffff, #e6e2d6); border-radius: 20px; box-shadow: 0 1rem 3rem rgba(0,0,0,0.15); border: 0.5rem solid var(--cabin-frame-color); box-sizing: border-box; display: flex; flex-direction: column; padding: 1.5rem; }
         
-        /* 新的佈局容器 */
-        .info-panel { text-align: center; flex-shrink: 0; /* 防止被壓縮 */ }
-        .main-game-area { display: flex; flex-direction: column; flex-grow: 1; gap: 0.5rem; min-height: 0; /* 讓 flex-grow 正常工作 */ }
-        
-        /* 資訊面板內的元素 */
-        header { padding-bottom: 0.5rem; }
-        h1 { margin: 0; font-size: 2.2rem; }
+        /* 佈局容器 (直向) */
+        .info-panel { text-align: center; flex-shrink: 0; }
+        .game-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1rem; flex-grow: 1; background-color: var(--cabin-frame-color); border: 1rem solid var(--cabin-frame-color); border-radius: 1.5rem; padding: 1rem; min-height: 0; }
+        .draggable-object-area { display: flex; justify-content: center; align-items: center; padding: 0.5rem; min-height: 8rem; flex-shrink: 0; }
+
+        /* 元素樣式 */
+        header { padding-bottom: 0.5rem; } h1 { margin: 0; font-size: 2.2rem; }
         .status-bar { display: flex; justify-content: space-around; font-size: 1.8rem; font-weight: bold; padding: 0.8rem; background-color: rgba(255, 255, 255, 0.5); border-radius: 1rem; margin-bottom: 1rem; }
         .instruction-area { font-size: 2rem; font-weight: bold; padding: 0.5rem; margin-bottom: 0.5rem; display:flex; justify-content: center; align-items: center; }
         .instruction-area .emoji { font-size: 1.2em; vertical-align: middle; margin: 0 0.5rem; }
-
-        /* 遊戲互動區的元素 */
-        .game-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1rem; flex-grow: 1; background-color: var(--cabin-frame-color); border: 1rem solid var(--cabin-frame-color); border-radius: 1.5rem; padding: 1rem; }
         .grid-cell { background-color: var(--cabin-inner-color); border-radius: 1rem; display: flex; justify-content: center; align-items: center; font-size: 3rem; user-select: none; }
-        .draggable-object-area { display: flex; justify-content: center; align-items: center; padding: 0.5rem; min-height: 8rem; }
         #draggable-emoji-container { padding: 1rem; display: flex; justify-content: center; align-items: center; border: 0.3rem dashed var(--cabin-frame-color); border-radius: 1rem; background-color: #FFF8E1; }
         #draggable-emoji-container .emoji { font-size: 4.2rem; line-height: 1; }
+        .emoji { cursor: grab; user-select: none; text-shadow: 0.2rem 0.2rem 0.4rem rgba(0,0,0,0.2); } .emoji.dragging { opacity: 0.5; cursor: grabbing; } .emoji.immobile { cursor: not-allowed; }
         
-        .emoji { cursor: grab; user-select: none; text-shadow: 0.2rem 0.2rem 0.4rem rgba(0,0,0,0.2); }
-        .emoji.dragging { opacity: 0.5; cursor: grabbing; }
-        .emoji.immobile { cursor: not-allowed; }
-        
-        /* 覆蓋層樣式 (與 v2.7 相同) */
+        /* 覆蓋層樣式 (與 v3.0 相同) */
         .game-overlay, .feedback-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; transition: opacity 0.5s; }
         .game-overlay { background-color: rgba(248, 244, 230, 0.95); z-index: 100; padding: 2rem; box-sizing: border-box; } .feedback-overlay { background-color: rgba(255, 255, 255, 0.1); backdrop-filter: blur(2px); z-index: 150; }
         .hidden { display: none !important; }
         .feedback-icon { font-size: 15rem; font-weight: bold; text-shadow: 0 0 2rem rgba(0,0,0,0.3); animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .feedback-icon.correct { color: #28a745; } .feedback-icon.wrong { color: #dc3545; }
         @keyframes pop-in { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        /* ...其他覆蓋層內的詳細樣式與 v2.7 相同... */
-        .game-overlay h2 { font-size: 3rem; } .game-overlay p { font-size: 1.5rem; } .login-form { font-size: 1.8rem; } .form-group select { font-size: 1em; } #login-error { height: 2rem; } .leaderboard { font-size: 1.2rem; } .game-button { font-size: 2rem; }
+        .game-overlay h2, .login-form, .leaderboard, .game-button { /* 簡化以節省空間 */ font-size: 1.5rem; } .game-overlay h2 { font-size: 3rem; } .game-button { font-size: 2rem; }
 
         /* 橫向模式媒體查詢 */
         @media (orientation: landscape) {
             :root { font-size: 2vh; }
             .game-container {
                 display: grid;
-                grid-template-columns: 3fr 7fr; /* 左側資訊欄，右側遊戲區 */
+                /* 終極三欄式佈局 */
+                grid-template-columns: auto 1fr auto;
+                grid-template-rows: 1fr; /* 只有一行 */
+                align-items: center; /* 讓三欄垂直居中 */
                 gap: 2rem;
                 padding: 2rem;
             }
             .info-panel {
                 display: flex;
                 flex-direction: column;
-                justify-content: center; /* 垂直居中 */
+                justify-content: center;
                 gap: 1.5rem;
             }
-            .main-game-area {
-                justify-content: center;
+            .game-grid {
+                height: 100%; /* 確保格子佔滿中間欄的高度 */
             }
-            header, .status-bar, .instruction-area {
-                margin-bottom: 0;
+            .draggable-object-area {
+                min-height: auto;
+                padding: 2rem;
             }
+            header, .status-bar, .instruction-area { margin-bottom: 0; }
         }
     </style>
 </head>
 <body>
-    <!-- *** 版本 3.0 HTML 結構重構 *** -->
+    <!-- *** 版本 3.1 HTML 結構重構 *** -->
     <div class="game-container" id="game-main-interface" style="display:none;">
+        <!-- 移除了 main-game-area 包裹 -->
         <div class="info-panel">
             <header><h1>森林裡的奇妙小屋</h1></header>
             <div class="status-bar">
@@ -80,20 +78,18 @@
             </div>
             <div class="instruction-area" id="instruction-text"></div>
         </div>
-        <div class="main-game-area">
-            <div class="game-grid" id="game-grid"></div>
-            <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div>
-        </div>
+        <div class="game-grid" id="game-grid"></div>
+        <div class="draggable-object-area"><div id="draggable-emoji-container"></div></div>
     </div>
     
-    <!-- 其他 HTML 覆蓋層與 v2.7 相同 -->
+    <!-- 其他 HTML 覆蓋層與 v3.0 相同 -->
     <div class="game-overlay" id="login-screen"><h2>歡迎來到奇妙小屋</h2><div class="login-form"><div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div><div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div></div><div id="login-error"></div><button class="game-button" id="login-button">確定</button></div>
     <div class="game-overlay hidden" id="instruction-screen"><h2>遊戲規則</h2><p>在 60 秒內，根據上方的指令，將下方的水果拖到小屋中正確的位置。答對加 10 分並進入下一題，答錯會彈回原位，直到答對為止。看看你有多快！</p><button class="game-button" id="ready-button">準備好了！</button></div>
     <div class="game-overlay hidden" id="end-screen"><h2>時間到！</h2><p id="end-message"></p><div id="leaderboard-container"></div><button class="game-button" id="replay-button">再玩一次</button></div>
     <div class="feedback-overlay hidden" id="feedback-overlay"><div class="feedback-icon" id="feedback-icon"></div></div>
 
     <script>
-    // --- 版本 3.0 ---
+    // --- 版本 3.1 ---
     // JavaScript 部分與 v2.7 完全相同，因為這次只修改了 HTML 結構和 CSS 樣式。
     // 這裡貼上完整的 v2.7 JavaScript 程式碼以確保遊戲能完整運行。
     const feedbackOverlay = document.getElementById('feedback-overlay'); const feedbackIcon = document.getElementById('feedback-icon'); const gameMainInterface = document.getElementById('game-main-interface'), loginScreen = document.getElementById('login-screen'), instructionScreen = document.getElementById('instruction-screen'), endScreen = document.getElementById('end-screen'), classSelect = document.getElementById('class-select'), studentIdSelect = document.getElementById('student-id-select'), loginButton = document.getElementById('login-button'), loginError = document.getElementById('login-error'), readyButton = document.getElementById('ready-button'), replayButton = document.getElementById('replay-button'), timerDisplay = document.getElementById('timer'), scoreDisplay = document.getElementById('score'), instructionText = document.getElementById('instruction-text'), gameGrid = document.getElementById('game-grid'), draggableContainer = document.getElementById('draggable-emoji-container'), endMessage = document.getElementById('end-message'), leaderboardContainer = document.getElementById('leaderboard-container');
