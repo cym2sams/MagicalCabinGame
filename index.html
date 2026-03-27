@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>數學遊戲：森林裡的奇妙小屋 v7.3</title>
+    <title>數學遊戲：位置猜猜猜 v7.3</title>
     <style>
         /* CSS 與 v7.2 相同，新增 designer-credit 樣式 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
@@ -49,7 +49,7 @@
     </div>
 
     <!-- 其他 HTML 結構與 v7.2 完全相同 -->
-    <div class="game-overlay" id="login-screen"><h2>歡迎來到奇妙小屋</h2><div class="login-form"><div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div><div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div></div><div id="login-error"></div><button class="game-button" id="login-button">確定</button></div>
+    <div class="game-overlay" id="login-screen"><h2>位置猜猜猜</h2><div class="login-form"><div class="form-group"><label for="class-select">選擇班別:</label><select id="class-select"><option value="">請選擇...</option><option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option><option value="1D">1D</option></select></div><div class="form-group"><label for="student-id-select">選擇學號:</label><select id="student-id-select"><option value="">請選擇...</option></select></div></div><div id="login-error"></div><button class="game-button" id="login-button">確定</button></div>
     <div class="game-overlay hidden" id="instruction-screen"><h2>遊戲規則</h2><p>在 60 秒內，根據上方的指令，將下方的水果拖到小屋中正確的位置。答對加 10 分並進入下一題，答錯會彈回原位，直到答對為止。看看你有多快！</p><button class="game-button" id="ready-button">準備好了！</button></div>
     <div class="game-overlay hidden" id="end-screen"><h2>時間到！</h2><p id="end-message"></p><p id="player-rank"></p><div id="leaderboard-container"></div><button class="game-button" id="replay-button">再玩一次</button></div>
     <div class="feedback-overlay hidden" id="feedback-overlay"><div class="feedback-icon" id="feedback-icon"></div></div>
